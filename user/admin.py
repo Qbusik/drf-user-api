@@ -15,6 +15,7 @@ class UserAdmin(DjangoUserAdmin):
             {
                 "fields": (
                     "is_active",
+                    "email_confirmed",
                     "is_staff",
                     "is_superuser",
                     "groups",
@@ -39,6 +40,6 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
-    list_display = ("email", "first_name", "last_name", "is_staff")
+    list_display = ("email", "first_name", "last_name", "is_staff", "email_confirmed")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)

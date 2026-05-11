@@ -5,8 +5,7 @@ from rest_framework import serializers
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ("id", "email", "first_name", "last_name", "password", "is_staff")
-        read_only_fields = ("is_staff",)
+        fields = ("id", "email", "first_name", "last_name", "password")
         extra_kwargs = {"password": {"write_only": True, "min_length": 5}}
 
     def create(self, validated_data):
@@ -19,6 +18,17 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
             user.save()
         return user
+
+    def validate_email(self, value):
+        value = value.lower()
+        user = self.instance
+        qs = get_user_model().objects.filter(email=value)
+        if user:
+            qs = qs.exclude(pk=user.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Email already exists")
+
+        return value
 
 
 class LogoutSerializer(serializers.Serializer):
