@@ -1,10 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
-from django.utils.encoding import force_str, force_bytes
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from .tasks import send_verification_email
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -22,26 +21,13 @@ class CreateUserView(generics.CreateAPIView):
     permission_classes = []
 
     def perform_create(self, serializer):
+
         user = serializer.save()
 
-        token = PasswordResetTokenGenerator().make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-
-        email_body = render_to_string(
-            "verify_email.html",
-            {
-                "user": user,
-                "uid": uid,
-                "token": token,
-                "domain": self.request.get_host(),
-            },
+        send_verification_email.delay(
+            user_id=user.id,
+            domain=self.request.get_host(),
         )
-
-        email = EmailMessage(
-            subject="Verify your email", body=email_body, to=[user.email]
-        )
-
-        email.send()
 
 
 class ManageUserView(generics.RetrieveUpdateAPIView):
