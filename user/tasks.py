@@ -11,9 +11,9 @@ from django.utils.http import urlsafe_base64_encode
 def send_verification_email(self, user_id, domain):
 
     try:
-        User = get_user_model()
+        user_model = get_user_model()
 
-        user = User.objects.get(pk=user_id)
+        user = user_model.objects.get(pk=user_id)
 
         token = PasswordResetTokenGenerator().make_token(user)
 
@@ -47,9 +47,9 @@ def send_verification_email(self, user_id, domain):
 def send_reset_password_email(self, user_id, code):
 
     try:
-        User = get_user_model()
+        user_model = get_user_model()
 
-        user = User.objects.get(pk=user_id)
+        user = user_model.objects.get(pk=user_id)
 
         email_body = render_to_string(
             "reset_pwd_email.html",
