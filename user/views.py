@@ -28,7 +28,6 @@ from user.serializers import (
     description="Creates a new user and sends a verification email asynchronously.",
 )
 class CreateUserView(generics.CreateAPIView):
-
     serializer_class = UserSerializer
     permission_classes = []
 
@@ -47,7 +46,6 @@ class CreateUserView(generics.CreateAPIView):
     description="Resends verification email with a 10-second cooldown between requests.",
 )
 class ResendVerificationEmailView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -80,7 +78,6 @@ class ResendVerificationEmailView(APIView):
     description="Retrieve user's profile.",
 )
 class RetrieveUserView(generics.RetrieveAPIView):
-
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
@@ -93,12 +90,20 @@ class RetrieveUserView(generics.RetrieveAPIView):
     description="Updates authenticated user's profile data.",
 )
 class UpdateUserView(generics.UpdateAPIView):
-
     serializer_class = UpdateUserSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user
+
+    def perform_update(self, serializer):
+        user = serializer.save()
+
+        if getattr(user, "_email_changed", False):
+            send_verification_email.delay(
+                user_id=user.id,
+                domain=self.request.get_host(),
+            )
 
 
 @extend_schema(
@@ -108,7 +113,6 @@ class UpdateUserView(generics.UpdateAPIView):
     responses={200: None},
 )
 class ChangePasswordView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -141,10 +145,6 @@ class ChangePasswordView(APIView):
     responses={200: None},
 )
 class VerifyEmailView(APIView):
-    """
-    Verify user's email and render a confirmation page.
-    """
-
     def get(self, request, uidb64, token):
 
         token_generator = PasswordResetTokenGenerator()
@@ -209,7 +209,6 @@ class VerifyEmailView(APIView):
     responses={205: None},
 )
 class LogoutView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

@@ -31,7 +31,7 @@ class UserSerializer(EmailLowercaseUniqueMixin, serializers.ModelSerializer):
         return value
 
 
-class UpdateUserSerializer(EmailLowercaseUniqueMixin, serializers.ModelSerializer):
+class UpdateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ("id", "email", "first_name", "last_name")
@@ -43,14 +43,12 @@ class UpdateUserSerializer(EmailLowercaseUniqueMixin, serializers.ModelSerialize
 
         user = super().update(instance, validated_data)
 
-        changed = False
-
         if email_changed:
             user.email_confirmed = False
-            changed = True
-
-        if changed:
-            user.save()
+            user.save(update_fields=["email_confirmed"])
+            user._email_changed = True
+        else:
+            user._email_changed = False
 
         return user
 
