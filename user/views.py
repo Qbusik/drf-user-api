@@ -14,7 +14,12 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from user.serializers import UserSerializer, LogoutSerializer, UpdateUserSerializer
+from user.serializers import (
+    UserSerializer,
+    LogoutSerializer,
+    UpdateUserSerializer,
+    ChangePasswordSerializer,
+)
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -89,6 +94,30 @@ class UpdateUserView(generics.UpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        new_password = serializer.validated_data["new_password"]
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response(
+            {"detail": "Password changed successfully"},
+            status=status.HTTP_200_OK,
+        )
 
 
 class VerifyEmailView(APIView):

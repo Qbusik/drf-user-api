@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 
@@ -25,6 +26,10 @@ class UserSerializer(EmailLowercaseUniqueMixin, serializers.ModelSerializer):
     def create(self, validated_data):
         return get_user_model().objects.create_user(**validated_data)
 
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
 
 class UpdateUserSerializer(EmailLowercaseUniqueMixin, serializers.ModelSerializer):
     class Meta:
@@ -48,6 +53,26 @@ class UpdateUserSerializer(EmailLowercaseUniqueMixin, serializers.ModelSerialize
             user.save()
 
         return user
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        current_password = attrs.get("current_password")
+
+        if not user.check_password(current_password):
+            raise serializers.ValidationError(
+                {"current_password": "Incorrect password"}
+            )
+
+        return attrs
 
 
 class LogoutSerializer(serializers.Serializer):
