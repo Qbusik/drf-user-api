@@ -8,7 +8,7 @@ from django.core.cache import cache
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .tasks import send_verification_email
+from .tasks import send_verification_email, send_reset_password_email
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, status
@@ -20,7 +20,10 @@ from user.serializers import (
     LogoutSerializer,
     UpdateUserSerializer,
     ChangePasswordSerializer,
+    ForgotPasswordSerializer,
+    ResetPasswordSerializer,
 )
+from .utils import generate_otp
 
 
 @extend_schema(
@@ -132,6 +135,121 @@ class ChangePasswordView(APIView):
 
         return Response(
             {"detail": "Password changed successfully"},
+            status=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(
+    summary="Forgot password",
+    description="Send password reset code to email.",
+    request=ForgotPasswordSerializer,
+    responses={200: None},
+)
+class ForgotPasswordView(APIView):
+    def post(self, request):
+
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+
+        user_model = get_user_model()
+
+        user = user_model.objects.filter(email=email).first()
+
+        if user:
+
+            cooldown_key = f"pwd_reset_cooldown:{user.id}"
+
+            if not cache.get(cooldown_key):
+
+                code = generate_otp()
+
+                cache.set(
+                    f"pwd_reset:{user.id}",
+                    code,
+                    timeout=300,
+                )
+
+                send_reset_password_email.delay(
+                    user_id=user.id,
+                    code=code,
+                )
+
+                cache.set(
+                    cooldown_key,
+                    True,
+                    timeout=60,
+                )
+
+        return Response(
+            {"detail": "If account exists, code was sent"},
+            status=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(
+    summary="Reset password",
+    description="Reset password using email and OTP code.",
+    request=ResetPasswordSerializer,
+    responses={200: None},
+)
+class ResetPasswordView(APIView):
+
+    def post(self, request):
+
+        serializer = ResetPasswordSerializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        code = serializer.validated_data["code"].upper()
+        new_password = serializer.validated_data["new_password"]
+
+        user_model = get_user_model()
+
+        user = user_model.objects.filter(email=email).first()
+
+        if not user:
+            return Response(
+                {"detail": "Invalid request"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        attempts_key = f"pwd_reset_attempts:{user.id}"
+
+        attempts = cache.get(attempts_key, 0)
+
+        if attempts >= 5:
+            return Response(
+                {"detail": "Too many attempts"},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        cached_code = cache.get(f"pwd_reset:{user.id}")
+
+        if cached_code != code:
+
+            cache.set(
+                attempts_key,
+                attempts + 1,
+                timeout=300,
+            )
+
+            return Response(
+                {"detail": "Invalid or expired code"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+
+        user.save()
+
+        cache.delete(f"pwd_reset:{user.id}")
+        cache.delete(attempts_key)
+
+        return Response(
+            {"detail": "Password reset successful"},
             status=status.HTTP_200_OK,
         )
 

@@ -9,6 +9,8 @@ from user.views import (
     ResendVerificationEmailView,
     LogoutView,
     ChangePasswordView,
+    ResetPasswordView,
+    ForgotPasswordView,
 )
 
 app_name = "user"
@@ -21,10 +23,12 @@ urlpatterns = [
         name="verify_email",
     ),
     path(
-        "resend-verification-email/",
+        "me/resend-verification-email/",
         ResendVerificationEmailView.as_view(),
         name="resend_verification_email",
     ),
+    path("forget-password/", ForgotPasswordView.as_view(), name="forget_password"),
+    path("reset-password/", ResetPasswordView.as_view(), name="reset_password"),
     path("me/", RetrieveUserView.as_view(), name="retrieve_user"),
     path("me/update/", UpdateUserView.as_view(), name="update_user"),
     path("me/change-password/", ChangePasswordView.as_view(), name="change_password"),

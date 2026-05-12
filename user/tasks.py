@@ -41,3 +41,33 @@ def send_verification_email(self, user_id, domain):
 
     except Exception as exc:
         raise self.retry(exc=exc, countdown=10)
+
+
+@shared_task(bind=True, max_retries=3)
+def send_reset_password_email(self, user_id, code):
+
+    try:
+        User = get_user_model()
+
+        user = User.objects.get(pk=user_id)
+
+        email_body = render_to_string(
+            "reset_pwd_email.html",
+            {
+                "user": user,
+                "code": code,
+            },
+        )
+
+        email = EmailMessage(
+            subject="Password reset",
+            body=email_body,
+            to=[user.email],
+        )
+
+        email.content_subtype = "html"
+
+        email.send()
+
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=10)
