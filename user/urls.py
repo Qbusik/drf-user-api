@@ -6,6 +6,7 @@ from user.views import (
     ManageUserView,
     VerifyEmailView,
     ResendVerificationEmailView,
+    LogoutView,
 )
 
 app_name = "user"
@@ -25,4 +26,5 @@ urlpatterns = [
     path("me/", ManageUserView.as_view(), name="manage"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("logout/", LogoutView.as_view(), name="logout"),
 ]

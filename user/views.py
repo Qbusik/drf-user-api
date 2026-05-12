@@ -4,19 +4,21 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
 from rest_framework.response import Response
 from django.core.cache import cache
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from .tasks import send_verification_email
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from user.serializers import UserSerializer
+from user.serializers import UserSerializer, LogoutSerializer
 
 
 class CreateUserView(generics.CreateAPIView):
     """
-    Register a new user, and send email confirmation message.
+    Register a new user, and send verification email.
     """
 
     serializer_class = UserSerializer
@@ -33,6 +35,9 @@ class CreateUserView(generics.CreateAPIView):
 
 
 class ResendVerificationEmailView(APIView):
+    """
+    Resend verification email.
+    """
 
     def post(self, request):
 
@@ -131,3 +136,28 @@ class VerifyEmailView(APIView):
             },
             status=400,
         )
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            refresh_token = serializer.validated_data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response(
+                {"detail": "Successfully logged out"},
+                status=status.HTTP_205_RESET_CONTENT,
+            )
+
+        except Exception:
+            return Response(
+                {"detail": "Invalid token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
