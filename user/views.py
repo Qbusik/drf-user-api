@@ -100,9 +100,17 @@ class UpdateUserView(generics.UpdateAPIView):
         return self.request.user
 
     def perform_update(self, serializer):
+        user = self.get_object()
+        old_email = user.email
+
         user = serializer.save()
 
-        if getattr(user, "_email_changed", False):
+        email_changed = old_email != user.email
+
+        if email_changed:
+            user.email_confirmed = False
+            user.save(update_fields=["email_confirmed"])
+
             send_verification_email.delay(
                 user_id=user.id,
                 domain=self.request.get_host(),

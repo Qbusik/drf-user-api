@@ -36,22 +36,6 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         model = get_user_model()
         fields = ("id", "email", "first_name", "last_name")
 
-    def update(self, instance, validated_data):
-        email_changed = (
-            "email" in validated_data and validated_data["email"] != instance.email
-        )
-
-        user = super().update(instance, validated_data)
-
-        if email_changed:
-            user.email_confirmed = False
-            user.save(update_fields=["email_confirmed"])
-            user._email_changed = True
-        else:
-            user._email_changed = False
-
-        return user
-
 
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
