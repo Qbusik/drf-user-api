@@ -97,6 +97,10 @@ class UpdateUserView(generics.UpdateAPIView):
 
 
 class ChangePasswordView(APIView):
+    """
+    Change the user password by providing the current and new password.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -183,6 +187,10 @@ class VerifyEmailView(APIView):
 
 
 class LogoutView(APIView):
+    """
+    Logout user by blacklisting the refresh token.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
