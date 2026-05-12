@@ -1,12 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import render
 from .tasks import send_verification_email
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from user.serializers import UserSerializer
@@ -44,7 +44,7 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
 
 class VerifyEmailView(APIView):
     """
-    Verify user email.
+    Verify user's email and render a confirmation page.
     """
 
     def get(self, request, uidb64, token):
@@ -56,15 +56,49 @@ class VerifyEmailView(APIView):
             user = get_user_model().objects.get(pk=user_id)
 
         except (TypeError, ValueError, OverflowError, ObjectDoesNotExist):
-            return Response({"error": "Invalid link"}, status=400)
+
+            return render(
+                request,
+                "verify_response.html",
+                {
+                    "title": "Invalid Link",
+                    "message": "Verification link is invalid.",
+                },
+                status=400,
+            )
 
         if user.email_confirmed:
-            return Response({"message": "Email already verified"})
+
+            return render(
+                request,
+                "verify_response.html",
+                {
+                    "title": "Already Verified",
+                    "message": "Your email is already verified.",
+                },
+            )
 
         if token_generator.check_token(user, token):
+
             user.email_confirmed = True
+
             user.save(update_fields=["email_confirmed"])
 
-            return Response({"message": "Email verified successfully"})
+            return render(
+                request,
+                "verify_response.html",
+                {
+                    "title": "Email Verified",
+                    "message": "Your email has been verified successfully.",
+                },
+            )
 
-        return Response({"error": "Invalid token"}, status=400)
+        return render(
+            request,
+            "verify_response.html",
+            {
+                "title": "Invalid Token",
+                "message": "Verification token is invalid or expired.",
+            },
+            status=400,
+        )
