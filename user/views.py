@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from django.core.cache import cache
 from rest_framework_simplejwt.exceptions import TokenError
@@ -22,10 +23,11 @@ from user.serializers import (
 )
 
 
+@extend_schema(
+    summary="Register user",
+    description="Creates a new user and sends a verification email asynchronously.",
+)
 class CreateUserView(generics.CreateAPIView):
-    """
-    Register a new user, and send verification email.
-    """
 
     serializer_class = UserSerializer
     permission_classes = []
@@ -40,10 +42,11 @@ class CreateUserView(generics.CreateAPIView):
         )
 
 
+@extend_schema(
+    summary="Resend verification email",
+    description="Resends verification email with a 10-second cooldown between requests.",
+)
 class ResendVerificationEmailView(APIView):
-    """
-    Resend verification email.
-    """
 
     permission_classes = [IsAuthenticated]
 
@@ -72,10 +75,11 @@ class ResendVerificationEmailView(APIView):
         return Response({"detail": "Email sent"}, status=200)
 
 
+@extend_schema(
+    summary="Get user profile",
+    description="Retrieve user's profile.",
+)
 class RetrieveUserView(generics.RetrieveAPIView):
-    """
-    Retrieve user's profile.
-    """
 
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
@@ -84,10 +88,11 @@ class RetrieveUserView(generics.RetrieveAPIView):
         return self.request.user
 
 
+@extend_schema(
+    summary="Update user profile",
+    description="Updates authenticated user's profile data.",
+)
 class UpdateUserView(generics.UpdateAPIView):
-    """
-    Update user's profile.
-    """
 
     serializer_class = UpdateUserSerializer
     permission_classes = [IsAuthenticated]
@@ -96,10 +101,13 @@ class UpdateUserView(generics.UpdateAPIView):
         return self.request.user
 
 
+@extend_schema(
+    summary="Change password",
+    description="Change the user password by providing the current and new password.",
+    request=ChangePasswordSerializer,
+    responses={200: None},
+)
 class ChangePasswordView(APIView):
-    """
-    Change the user password by providing the current and new password.
-    """
 
     permission_classes = [IsAuthenticated]
 
@@ -124,6 +132,14 @@ class ChangePasswordView(APIView):
         )
 
 
+@extend_schema(
+    summary="Verify email (email link)",
+    description=(
+        "This endpoint is triggered via a verification link sent to the user's email. "
+        "It is not intended to be called manually from Swagger UI."
+    ),
+    responses={200: None},
+)
 class VerifyEmailView(APIView):
     """
     Verify user's email and render a confirmation page.
@@ -186,10 +202,13 @@ class VerifyEmailView(APIView):
         )
 
 
+@extend_schema(
+    summary="Logout user",
+    description="Blacklists refresh token.",
+    request=LogoutSerializer,
+    responses={205: None},
+)
 class LogoutView(APIView):
-    """
-    Logout user by blacklisting the refresh token.
-    """
 
     permission_classes = [IsAuthenticated]
 
