@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
+from rest_framework.response import Response
+from django.core.cache import cache
 from .tasks import send_verification_email
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
@@ -28,6 +30,33 @@ class CreateUserView(generics.CreateAPIView):
             user_id=user.id,
             domain=self.request.get_host(),
         )
+
+
+class ResendVerificationEmailView(APIView):
+
+    def post(self, request):
+
+        user = request.user
+
+        if user.email_confirmed:
+            return Response({"detail": "Already verified"}, status=400)
+
+        cache_key = f"resend_verification:{user.id}"
+
+        if cache.get(cache_key):
+            return Response(
+                {"error": "Wait before resending"},
+                status=429,
+            )
+
+        send_verification_email.delay(
+            user_id=user.id,
+            domain=request.get_host(),
+        )
+
+        cache.set(cache_key, True, timeout=10)
+
+        return Response({"detail": "Email sent"}, status=200)
 
 
 class ManageUserView(generics.RetrieveUpdateAPIView):

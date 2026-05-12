@@ -13,10 +13,26 @@ class UserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
+
+        email_changed = (
+            "email" in validated_data and validated_data["email"] != instance.email
+        )
+
         user = super().update(instance, validated_data)
+
+        changed = False
+
         if password:
             user.set_password(password)
+            changed = True
+
+        if email_changed:
+            user.email_confirmed = False
+            changed = True
+
+        if changed:
             user.save()
+
         return user
 
     def validate_email(self, value):
