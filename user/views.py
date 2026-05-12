@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
 from rest_framework.response import Response
 from django.core.cache import cache
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .tasks import send_verification_email
@@ -13,7 +14,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from user.serializers import UserSerializer, LogoutSerializer
+from user.serializers import UserSerializer, LogoutSerializer, UpdateUserSerializer
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -38,6 +39,8 @@ class ResendVerificationEmailView(APIView):
     """
     Resend verification email.
     """
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
 
@@ -64,12 +67,24 @@ class ResendVerificationEmailView(APIView):
         return Response({"detail": "Email sent"}, status=200)
 
 
-class ManageUserView(generics.RetrieveUpdateAPIView):
+class RetrieveUserView(generics.RetrieveAPIView):
     """
-    Retrieve and update user's profile.
+    Retrieve user's profile.
     """
 
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class UpdateUserView(generics.UpdateAPIView):
+    """
+    Update user's profile.
+    """
+
+    serializer_class = UpdateUserSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
@@ -156,7 +171,7 @@ class LogoutView(APIView):
                 status=status.HTTP_205_RESET_CONTENT,
             )
 
-        except Exception:
+        except TokenError:
             return Response(
                 {"detail": "Invalid token"},
                 status=status.HTTP_400_BAD_REQUEST,

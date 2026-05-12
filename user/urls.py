@@ -3,7 +3,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from user.views import (
     CreateUserView,
-    ManageUserView,
+    RetrieveUserView,
+    UpdateUserView,
     VerifyEmailView,
     ResendVerificationEmailView,
     LogoutView,
@@ -23,7 +24,8 @@ urlpatterns = [
         ResendVerificationEmailView.as_view(),
         name="resend_verification_email",
     ),
-    path("me/", ManageUserView.as_view(), name="manage"),
+    path("me/", RetrieveUserView.as_view(), name="retrieve_user"),
+    path("me/update/", UpdateUserView.as_view(), name="update_user"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
