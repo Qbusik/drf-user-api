@@ -1,0 +1,4 @@
+Hi {{ user.first_name }} {{ user.last_name }},
+
+To confirm your email address, please click the following link:
+http://{{ domain }}{% url 'user:verify_email' uidb64=uid token=token %}
